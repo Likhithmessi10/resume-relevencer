@@ -245,7 +245,7 @@ if uploaded_jd and uploaded_resumes:
         score = final_score(hard, sem)
         v = verdict(score)
 
-        missing = [s for s in must_list if s.lower() not in resume_text.lower()]
+        missing = [s for s in must_list if max(fuzz.partial_ratio(s.lower(), resume_text.lower()) for _ in [0]) < 70]
         
         with st.spinner(f"Generating personalized feedback for {resume.name}..."):
             feedback = generate_feedback_groq(resume_text, jd_text, missing)
