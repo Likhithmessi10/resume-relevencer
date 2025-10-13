@@ -13,7 +13,7 @@ from pymongo import MongoClient
 from groq import Groq
 import itertools
 
-st.set_page_config(page_title="Resume Relevance Dashboard", layout="wide")
+st.set_page_config(page_title="Resume Relevancer", layout="wide")
 # ======================
 # Helpers
 # ======================
