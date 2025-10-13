@@ -120,6 +120,9 @@ def get_all_results():
     results = list(collection.find())
     df = pd.DataFrame(results)
     
+    if '_id' in df.columns:
+        df['_id'] = df['_id'].astype(str)
+
     if 'Job Title' in df.columns:
         df['Job Title'] = df['Job Title'].fillna('')
     else:
@@ -283,12 +286,12 @@ if not df.empty:
             filtered_df["Feedback"].str.contains(search_query, case=False, na=False)
         ]
 
-    df_display = filtered_df.drop(columns=['_id', 'Job Title'], errors='ignore')
+    df_display = filtered_df.drop(columns=['_id'], errors='ignore')
     # Reset index and start from 1 instead of 0
     df_display = df_display.sort_values(by="Final Score", ascending=False).reset_index(drop=True)
     df_display.index = df_display.index + 1  # Start index from 1
 
-    st.dataframe(df_display, use_container_width=True)
+    st.dataframe(df_display, width='stretch')
 
 
     for index, res in filtered_df.iterrows():
@@ -303,8 +306,14 @@ if not df.empty:
     if verdict_filter != "All":
         filtered_df2 = filtered_df2[filtered_df2["Verdict"] == verdict_filter]
 
+    # Drop _id and keep only columns you want to display
+    filtered_df2 = filtered_df2.drop(columns=['_id'], errors='ignore')
+    columns_to_show = ["Resume", "Job Title", "Hard Score", "Semantic Score", "Final Score", "Verdict", "Missing Skills", "Feedback"]
+    filtered_df2 = filtered_df2[[col for col in columns_to_show if col in filtered_df2.columns]]
+
     filtered_df2 = filtered_df2.sort_values(by="Final Score", ascending=False).reset_index(drop=True)
     filtered_df2.index = filtered_df2.index + 1
 
     st.dataframe(filtered_df2, use_container_width=True)
+
 
