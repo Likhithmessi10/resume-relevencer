@@ -72,7 +72,7 @@ def parse_jd_skills(jd_text):
     must_have = []
     good_to_have = []
 
-    skill_sections_pattern = r"(skills|requirements|key skills|experience|responsibilities|qualifications)\s*:"
+    skill_sections_pattern = r"(skills|requirements|key skills|experience|responsibilities|qualifications|will need|must have|ideal candidate|about you|what you'll bring)\s*[:\n]"
     
     skill_section_match = re.search(skill_sections_pattern, jd_text)
     if not skill_section_match:
