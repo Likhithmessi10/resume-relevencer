@@ -68,37 +68,79 @@ def verdict(score):
         return "Low"
 
 def parse_jd_skills(jd_text):
-    jd_text = jd_text.lower()
+    """Improved: Extract must-have and good-to-have skills from a job description robustly."""
+    text = jd_text or ""
     must_have = []
     good_to_have = []
 
-    skill_sections_pattern = r"(skills|requirements|key skills|experience|responsibilities|qualifications|will need|must have|ideal candidate|about you|what you'll bring)\s*[:\n]"
-    
-    skill_section_match = re.search(skill_sections_pattern, jd_text)
-    if not skill_section_match:
-        return [], []
-        
-    start_pos = skill_section_match.end()
-    end_match = re.search(skill_sections_pattern, jd_text[start_pos:])
-    if end_match:
-        end_pos = start_pos + end_match.start()
-        skills_text = jd_text[start_pos:end_pos].strip()
-    else:
-        skills_text = jd_text[start_pos:].strip()
-        
-    skills_list = re.split(r'[,•\-*]', skills_text)
-    skills_list = [s.strip() for s in skills_list if s.strip()]
+    # Normalize spacing and lowercase
+    text = re.sub(r'\s+', ' ', text)
+    text = text.replace("•", "-").replace("*", "-")
 
-    for skill_phrase in skills_list:
-        if any(keyword in skill_phrase for keyword in ['advantageous', 'preferred', 'nice to have']):
-            clean_skill = re.sub(r'\(?advantageous\)?|\(preferred\)|\(nice to have\)|knowledge of', '', skill_phrase).strip()
-            if clean_skill:
-                good_to_have.append(clean_skill)
+    # Split into sentences or bullet-like chunks
+    parts = re.split(r'[\n\-•;:]', text)
+    parts = [p.strip() for p in parts if 2 <= len(p.strip().split()) <= 10]  # reasonable phrases
+
+    # Keywords that hint what’s required or optional
+    must_keywords = [
+        "must have", "required", "essential", "mandatory", "should have",
+        "need to have", "we are looking for", "responsible for"
+    ]
+    good_keywords = [
+        "preferred", "nice to have", "desirable", "bonus", "advantageous",
+        "optional", "good to have", "plus", "preferred but not required"
+    ]
+
+    # Scan and categorize
+    for p in parts:
+        lower = p.lower()
+        if any(k in lower for k in must_keywords):
+            clean = re.sub(r'(' + '|'.join(must_keywords) + ')', '', lower)
+            must_have.append(clean.strip().capitalize())
+        elif any(k in lower for k in good_keywords):
+            clean = re.sub(r'(' + '|'.join(good_keywords) + ')', '', lower)
+            good_to_have.append(clean.strip().capitalize())
         else:
-            if skill_phrase:
-                must_have.append(skill_phrase)
-    
+            # Likely a skill list line (short, comma-separated)
+            if len(p.split()) <= 5:
+                must_have.append(p.capitalize())
+
+    # Handle comma-separated lists inside sentences
+    all_skills = []
+    for m in must_have + good_to_have:
+        for s in re.split(r'[,&/]', m):
+            skill = s.strip().capitalize()
+            if 2 <= len(skill.split()) <= 5:
+                all_skills.append(skill)
+
+    # Deduplicate and refine
+    def dedupe(lst):
+        seen = set()
+        out = []
+        for s in lst:
+            key = s.lower()
+            if key not in seen:
+                seen.add(key)
+                out.append(s)
+        return out
+
+    must_have = dedupe(must_have)
+    good_to_have = dedupe(good_to_have)
+
+    # Final safety check: If both lists empty, extract using fallback keywords
+    if not must_have and not good_to_have:
+        tokens = re.findall(r'\b[A-Za-z0-9\+\#]{2,}\b', text)
+        tech_keywords = [
+            t for t in tokens if t.lower() in [
+                "python", "java", "aws", "excel", "sql", "react", "node", "docker",
+                "azure", "machine", "ai", "ml", "nlp", "tensorflow", "keras", "pytorch",
+                "javascript", "html", "css", "git", "linux", "mongodb", "flask", "django"
+            ]
+        ]
+        must_have = dedupe(tech_keywords)
+
     return must_have, good_to_have
+
 
 # ======================
 # MongoDB Atlas Functions
